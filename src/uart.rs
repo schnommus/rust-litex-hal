@@ -1,3 +1,8 @@
+#[derive(Debug, defmt::Format)]
+pub enum UartError {
+    Overrun,
+}
+
 #[macro_export]
 macro_rules! uart {
     ($(
@@ -36,6 +41,25 @@ macro_rules! uart {
                 fn flush(&mut self) -> $crate::nb::Result<(), Self::Error> {
                     if self.registers.txempty.read().bits() != 0 {
                         Ok(())
+                    } else {
+                        Err($crate::nb::Error::WouldBlock)
+                    }
+                }
+            }
+
+            impl $crate::hal::serial::Read<u8> for $UARTX {
+                type Error = UartError;
+                fn read(&mut self) -> $crate::nb::Result<u8, Self::Error> {
+                    /*
+                    if self.registers.rxfull.read().bits() != 0 {
+                        return Err($crate::nb::Error::Other(Self::Error::Overrun));
+                    }
+                    */
+                    if self.registers.rxempty.read().bits() == 0 {
+                        let byte = self.registers.rxtx.read().bits() as u8;
+                        self.registers.ev_pending.write(
+                            |w| w.rx().bit(true));
+                        Ok(byte)
                     } else {
                         Err($crate::nb::Error::WouldBlock)
                     }
