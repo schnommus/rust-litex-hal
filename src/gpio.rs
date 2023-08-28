@@ -21,7 +21,7 @@ macro_rules! gpio {
                 fn set_low(&mut self) -> Result<(), Self::Error> {
                     let reg = unsafe { &*<$PACGPIOX>::ptr() };
                     let mask: u32 = !(1 << self.index);
-                    riscv::interrupt::free(|_cs| {
+                    riscv::interrupt::free(|| {
                         let val: u32 = reg.out.read().bits() & mask;
                         unsafe {
                             reg.out.write(|w| w.bits(val));
@@ -32,7 +32,7 @@ macro_rules! gpio {
                 fn set_high(&mut self) -> Result<(), Self::Error> {
                     let reg = unsafe { &*<$PACGPIOX>::ptr() };
                     let mask: u32 = 1 << self.index;
-                    riscv::interrupt::free(|_cs| {
+                    riscv::interrupt::free(|| {
                         let val: u32 = reg.out.read().bits() | mask;
                         unsafe {
                             reg.out.write(|w| w.bits(val));
