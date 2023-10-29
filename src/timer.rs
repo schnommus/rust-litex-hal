@@ -25,20 +25,25 @@ macro_rules! timer {
                     let cycles1: u32 = self.registers.uptime_cycles1.read().bits();
                     ((cycles1 as u64) << 32) | (cycles0 as u64)
                 }
+
+                pub fn set_periodic_event(&self, period_ms: u32) {
+                    let value: u32 = (self.sys_clk / 1_000) * period_ms;
+                    unsafe {
+                        self.registers.en.write(|w| w.bits(0));
+                        self.registers.load.write(|w| w.load().bits(value));
+                        self.registers.reload.write(|w| w.reload().bits(value));
+                        self.registers.ev_enable.write(|w| w.bits(1));
+                        self.registers.en.write(|w| w.bits(1));
+                    }
+                }
             }
 
             impl<UXX: core::convert::Into<u32>> $crate::hal::blocking::delay::DelayMs<UXX> for $TIMERX {
                 fn delay_ms(&mut self, ms: UXX) -> () {
+                    let start: u64 = self.uptime();
                     let value: u32 = self.sys_clk / 1_000 * ms.into();
-                    unsafe {
-                        self.registers.en.write(|w| w.bits(0));
-                        self.registers.reload.write(|w| w.bits(0));
-                        self.registers.load.write(|w| w.bits(value));
-                        self.registers.en.write(|w| w.bits(1));
-                        self.registers.update_value.write(|w| w.bits(1));
-                        while self.registers.value.read().bits() > 0 {
-                            self.registers.update_value.write(|w| w.bits(1));
-                        }
+                    while (self.uptime() - start) < value as u64 {
+                        // Blocking wait for the timer
                     }
                 }
             }
