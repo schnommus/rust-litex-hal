@@ -20,10 +20,12 @@ macro_rules! timer {
                 }
 
                 pub fn uptime(&self) -> u64 {
-                    self.registers.uptime_latch.write(unsafe { |w| w.uptime_latch().bit(true) } );
-                    let cycles0: u32 = self.registers.uptime_cycles0.read().bits();
-                    let cycles1: u32 = self.registers.uptime_cycles1.read().bits();
-                    ((cycles1 as u64) << 32) | (cycles0 as u64)
+                    riscv::interrupt::free(|| {
+                        self.registers.uptime_latch.write(unsafe { |w| w.uptime_latch().bit(true) } );
+                        let cycles0: u32 = self.registers.uptime_cycles0.read().bits();
+                        let cycles1: u32 = self.registers.uptime_cycles1.read().bits();
+                        ((cycles1 as u64) << 32) | (cycles0 as u64)
+                    })
                 }
 
                 pub fn set_periodic_event(&self, period_ms: u32) {
